@@ -109,7 +109,10 @@ while IFS=$'\n' read -d '' -r action path; do
     shasum_filename=$(printf "%s" "$file" | sed -z 's/\n/\\n/g')
     export shasum_filename
     if [ -f "${_path}/checksums.sha256sum" ]; then
-      cat "${_path}/checksums.sha256sum" | awk '$2 != ENVIRON["shasum_filename"]'
+      cat "${_path}/checksums.sha256sum" | while read -r s f; do
+        if [ "$f" = "$shasum_filename" ]; then continue; fi
+        printf "%s  %s\n" "$s" "$f"
+      done
     fi
   ) | sort -k 2 > "${_path}/.checksums.sha256sum.tmp"
 
