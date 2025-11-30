@@ -1,0 +1,10 @@
+[Unit]
+Description=File integrity over %i
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/fs-integrity %i
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,65 @@
+#!/bin/sh
+#
+# Maintains a tree-hash as on-disk checksum files.
+#
+# MIT 2-clause <nick@kousu.ca> 2025
+#
+# Run as:
+# fs-integrity managed-folder/
+#
+# Verify checksums:
+# find managed-folder/ -name checksums.sha256sum -type f | while read chk; do awk -v PREFIX=$(dirname $chk) '{print $1, PREFIX "/" $2}' $chk; done | sha256sum -c
+
+# TODO:
+# - [ ] debounce
+#    Lots of apps (editors, especially) write tmp files
+#    which only exist for a split second in order to guarantee atomic writes;
+#    ( in fact we do it ourselves below )
+#    some editors (including the GNOME text editor?) write twice for every save even though they don't change naything
+#    Insert a debounce so hashing only triggers once a file has settled for, say, 5s.
+# - [ ] should we catch move and create and modify?
+#    Using close_write is a poor-man's debounce.
+#    (but even it doesn't debounce everything);
+#    What about long running downloads? Should we checksum them halfway?
+# - [ ] detect and fill missing checksums on boot?
+#   - maybe a separate script is better ...
+# - [ ] use b2sum instead of sha256sum
+#   - faster
+#   - less portable?
+
+inotifywait -m -r -e close_write,delete "$@" |
+#inotifywait -m -r -e create,close_write,modify,move,delete --exclude "^checksums\.sha256sum\.tmp$" $@ |
+while read path action file; do
+
+  #echo "$path" "$action" "$file" >/dev/stderr  # DEBUG
+
+  # checksum child checksum
+  if [ "$file" = "checksums.sha256sum" ]; then
+      if [ $(realpath --relative-to=. "$path") = "." ]; then
+          # root of the tree, avoid recursing
+          continue
+      fi
+      # shift the subfolder
+      file=$(basename "$path")/"$file"
+      path=$(dirname "$path")
+  elif [ "$file" = ".checksums.sha256sum.tmp" ]; then
+      # avoid recursing
+      continue
+  fi
+
+	(
+	# drop old checksum for $file (and, if 'delete', drop it entirely)
+	export file
+	cat "${path}checksums.sha256sum" | awk '$2 != ENVIRON["file"]'
+
+  if [ "$action" != "DELETE" ]; then
+    # recompute checksum for the file
+    (set -x; cd "$path" && sha256sum "$file") | tee /dev/stderr
+  fi
+  ) | sort -k 2 > "${pcath}.checksums.sha256sum.tmp"
+
+	# atomic mv
+  mv "${path}.checksums.sha256sum.tmp" "${path}checksums.sha256sum"
+	# hash should recurse *up* parent folders
+	# #since inotify will notice the update
+done
