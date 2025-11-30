@@ -9,22 +9,16 @@
 
 
 # TODO:
-# - [ ] should we catch move and create and modify?
-#    Using close_write is a poor-man's debounce.
-#    (but even it doesn't debounce everything);
-#    What about long running downloads? Should we checksum them halfway?
-# - [ ] detect and fill missing checksums on boot?
-#   - maybe a separate script is better ...
-#   - but don't delete checksums for missing files, nor update checksums for changed files: those could represent corruption.
-#
 # - [ ] use b2sum instead of sha256sum
 #   - faster
-#   - less portable?
+#   - less portable? does that matter?
 # - [ ] test with filenames with weird characters
 # - [ ] files/folders with trailing newlines in their names don't work because shell strips trailing whitespace
 #    I don't know if I can fix this without switching languages
-# - [ ] Use paired MOVED_FROM/MOVED_TO to move the pre-computed checksum instead of recomputing it
-#    Tricky though.
+# - [ ] On file moves, move the checksum from one .SHA256SUM to the other, without recomputing
+#   - tricky because we receive separate MOVE_FROM and MOVE_TO events (and debounce might mis-order them)
+# - [ ] On directory (MOVED_FROM,ISDIR) moves, move the line for dirname/.SHA256SUMS between the parent .SHA256SUMs
+# - [ ] the "spilling from" message should not print unless there was actually a pre-existing checksum to remove
 
 set -eo pipefail
 
