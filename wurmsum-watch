@@ -123,8 +123,13 @@ while IFS=$'\n' read -d '' -r action path; do
     fi
   ) | sort -k 2 > "${_path}/.checksums.sha256sum.tmp"
 
-	# atomic mv
-  mv "${_path}/.checksums.sha256sum.tmp" "${_path}/checksums.sha256sum"
+	# atomic mv or delete
+  if [ -s "${_path}/.checksums.sha256sum.tmp" ]; then
+    mv "${_path}/.checksums.sha256sum.tmp" "${_path}/checksums.sha256sum"
+  else
+    # empty file => go away checksums
+    rm -f "${_path}/.checksums.sha256sum.tmp" "${_path}/checksums.sha256sum"
+  fi
 	# hash should recurse *up* parent folders
 	# #since inotify will notice the update
 done
