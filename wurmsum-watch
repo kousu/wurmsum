@@ -24,6 +24,8 @@
 #   - faster
 #   - less portable?
 # - [ ] test with filenames with weird characters
+# - [ ] files/folders with trailing newlines in their names don't work because shell strips trailing whitespace
+#    I don't know if I can fix this without switching languages
 
 set -eo pipefail
 
@@ -43,30 +45,37 @@ debounce() {
     now=$(date +%s)
 
     # read and cache an event; but proceed if none within timeout
-    if read -t "$timeout" -r path action file; then
-      echo "==> input: $path $action $file" >&2
-      k="${path}/${file}"
-      actions[$k]="$action" # because . = ./ recovering them is ambiguous
-      seen[$k]="$now"
+    if IFS=$'\n' read -t "$timeout" -d '' -r action path; then
+      #echo "==> input: |$action| |$path|" >&2  # DEBUG
+      actions["$path"]="$action" # because . = ./ recovering them is ambiguous
+      seen["$path"]="$now"
     fi
 
     # output settled events
-    for k in "${!seen[@]}"; do
-      echo "==> checking: $k, ${seen[$k]}, $(( $now - ${seen[$k]} ))s ago" >&2
-      if [ $(( $now - ${seen[$k]} )) -ge "$timeout" ]; then
-        printf "%s %s %s\n" "$(dirname "$k")" "${actions[$k]}" "$(basename "$k")"
-        unset actions[$k] seen[$k]
+    for path in "${!seen[@]}"; do
+      #echo "==> checking: $path, ${seen["$path"]}, $(( $now - ${seen["$path"]} ))s ago" >&2
+      if [ $(( $now - ${seen["$path"]} )) -ge "$timeout" ]; then
+        # echo "==> outputting |$path|" >&2 # DEBUG
+        printf "%s\n%s\0" "${actions["$path"]}" "$path"
+        unset actions["$path"] seen["$path"]
       fi
     done
   done
 }
 
 
-inotifywait -m -r -e close_write,delete "${targets[@]}" | debounce 10 |
-#inotifywait -m -r -e create,close_write,modify,move,delete --exclude "^checksums\.sha256sum\.tmp$" $@ |
-while read -r path action file; do
+inotifywait -m -r -e close_write,delete --format "%e%n%w%f%0" "${targets[@]}" |
+debounce 5 |
+while IFS=$'\n' read -d '' -r action path; do
 
-  #echo "$path" "$action" "$file" >/dev/stderr  # DEBUG
+  #echo "==> input: |$action| |$path|" >&2 # DEBUG
+
+  # we do this annoying parsing dance to handle weird characters like spaces and newlines in filenames
+  # though we still cannot handle _trailing_ newlines
+  file="$(basename "$path")"
+  _path="$(dirname "$path")"
+
+  #echo "path=|$path|, action=|$action|, file=|$file|, _path=|$_path|" >/dev/stderr  # DEBUG
 
   if [ "$file" = "checksums.sha256sum" ]; then
     # checksum children recursively:
@@ -74,14 +83,14 @@ while read -r path action file; do
     # - child1/checksums.sha256sum
     # - child2/checksums.sha256sum
 
-    if [ $(realpath --relative-to=. "$path") = "." ]; then
+    if [ $(realpath --relative-to=. "$_path") = "." ]; then
         # root of the tree, avoid recursing
         continue
     fi
 
-    # shift the subfolder
-    file=$(basename "$path")/"$file"
-    path=$(dirname "$path")
+    # shift the subfolder into $file
+    file="$(basename "$_path")/$file"
+    _path="$(dirname "$_path")"
   elif [ "$file" = ".checksums.sha256sum.tmp" ]; then
     # avoid recursing
     continue
@@ -90,16 +99,21 @@ while read -r path action file; do
   (
     if [ "$action" != "DELETE" ]; then
       # recompute checksum for the file
-      (set -x; cd "$path" && sha256sum "$file") | tee /dev/stderr
+      (set -x; cd "$_path" && sha256sum "$file") | tee /dev/stderr
     fi
 
     # drop old checksum for $file (and, if 'delete', drop it entirely)
-    export file
-    cat "${path}/checksums.sha256sum" | awk '$2 != ENVIRON["file"]'
-  ) | sort -k 2 > "${path}/.checksums.sha256sum.tmp"
+    #
+    # sha256sum encodes newlines as \n
+    shasum_filename=$(printf "%s" "$file" | sed -z 's/\n/\\n/g')
+    export shasum_filename
+    if [ -f "${_path}/checksums.sha256sum" ]; then
+      ( cat "${_path}/checksums.sha256sum" | awk '$2 != ENVIRON["shasum_filename"]' ) | tee /dev/stderr
+    fi
+  ) | sort -k 2 > "${_path}/.checksums.sha256sum.tmp"
 
 	# atomic mv
-  mv "${path}/.checksums.sha256sum.tmp" "${path}/checksums.sha256sum"
+  mv "${_path}/.checksums.sha256sum.tmp" "${_path}/checksums.sha256sum"
 	# hash should recurse *up* parent folders
 	# #since inotify will notice the update
 done
