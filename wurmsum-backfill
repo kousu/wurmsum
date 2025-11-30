@@ -1,0 +1,13 @@
+#!/bin/sh
+#
+
+TARGETS=("${@:-.}")
+find "${TARGETS[@]}" -type d |
+while read -r d; do
+  ( cd "$d";
+   comm -z -23 \
+     <(find . -maxdepth 1 -type f ! -name checksums.sha256sum -print0 | sed  -z 's/^.\///' | sort -z) \
+     <(if [ -f checksums.sha256sum ]; then cut -f 3- -d ' ' checksums.sha256sum; fi  |  tr '\n' '\0' | sed -z 's/\\n/\n/g' | sort -z ) \
+  | xargs -n1 -t -r -0 sha256sum >> checksums.sha256sum
+ );
+done
