@@ -79,14 +79,14 @@ while read -r path action file; do
   fi
 
 	(
-	# drop old checksum for $file (and, if 'delete', drop it entirely)
-	export file
-	cat "${path}/checksums.sha256sum" | awk '$2 != ENVIRON["file"]'
-
   if [ "$action" != "DELETE" ]; then
     # recompute checksum for the file
     (set -x; cd "$path" && sha256sum "$file") | tee /dev/stderr
   fi
+
+	# drop old checksum for $file (and, if 'delete', drop it entirely)
+	export file
+	cat "${path}/checksums.sha256sum" | awk '$2 != ENVIRON["file"]'
   ) | sort -k 2 > "${path}/.checksums.sha256sum.tmp"
 
 	# atomic mv
