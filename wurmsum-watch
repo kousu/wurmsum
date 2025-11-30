@@ -5,10 +5,7 @@
 # MIT 2-clause <nick@kousu.ca> 2025
 #
 # Run as:
-# fs-integrity managed-folder/
-#
-# Verify checksums:
-# find managed-folder/ -name checksums.sha256sum -type f | while read chk; do awk -v PREFIX=$(dirname $chk) '{print $1, PREFIX "/" $2}' $chk; done | sha256sum -c
+# wurmsum-watch managed-folder/
 
 
 # TODO:

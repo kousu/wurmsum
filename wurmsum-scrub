@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+
+targets=("${@:-./}")
+
+find "${targets[@]}" -name checksums.sha256sum -type f |
+while read chk; do
+  # merge all checksums
+  #
+  PREFIX="$(dirname "$chk")"
+  cat "$chk" | while read -r s f; do
+    printf "%s %s/%s\n" "$s" "$PREFIX" "$f"
+  done
+done |
+sort --key=2 |
+#tee /dev/stderr | # DEBUG
+sha256sum -c
