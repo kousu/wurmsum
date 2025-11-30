@@ -80,7 +80,7 @@ while IFS=$'\n' read -d '' -r action path; do
     # - child1/checksums.sha256sum
     # - child2/checksums.sha256sum
 
-    if [ $(realpath --relative-to=. "$_path") = "." ]; then
+    if [ "$(realpath --relative-to=. "$_path")" = "." ]; then
         # root of the tree, avoid recursing
         continue
     fi
