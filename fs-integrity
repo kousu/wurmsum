@@ -21,6 +21,10 @@
 #   - faster
 #   - less portable?
 
+set -eo pipefail
+
+targets=("${@:-./}")
+
 debounce() {
   # debounce events from inotifywait
   # for a given path/file, wait for timeout to elapse and only output the *last* event seen
@@ -54,9 +58,9 @@ debounce() {
 }
 
 
-inotifywait -m -r -e close_write,delete "$@" | debounce 10 |
+inotifywait -m -r -e close_write,delete "${targets[@]}" | debounce 10 |
 #inotifywait -m -r -e create,close_write,modify,move,delete --exclude "^checksums\.sha256sum\.tmp$" $@ |
-while read path action file; do
+while read -r path action file; do
 
   #echo "$path" "$action" "$file" >/dev/stderr  # DEBUG
 
