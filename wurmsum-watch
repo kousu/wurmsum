@@ -23,6 +23,8 @@
 # - [ ] test with filenames with weird characters
 # - [ ] files/folders with trailing newlines in their names don't work because shell strips trailing whitespace
 #    I don't know if I can fix this without switching languages
+# - [ ] Use paired MOVED_FROM/MOVED_TO to move the pre-computed checksum instead of recomputing it
+#    Tricky though.
 
 set -eo pipefail
 
@@ -61,7 +63,7 @@ debounce() {
 }
 
 
-inotifywait -m -r -e close_write,moved_to,delete --format "%e%n%w%f%0" "${targets[@]}" |
+inotifywait -m -r -e close_write,move,delete --format "%e%n%w%f%0" "${targets[@]}" |
 debounce 5 |
 while IFS=$'\n' read -d '' -r action path; do
 
@@ -94,13 +96,18 @@ while IFS=$'\n' read -d '' -r action path; do
   fi
 
   (
-    if [ "$action" != "DELETE" ]; then
+    if [ "$action" != "DELETE" ] && [ "$action" != "MOVED_FROM" ]; then
       # recompute checksum for the file
       if [ "$(basename "$file")" != "checksums.sha256sum" ]; then
         # status message
         echo "Clutching in hoard: ${path}" >&2
       fi
       (cd "$_path" && sha256sum "$file") # | (echo -n "${_path}/checksums.sha256sum:" > /dev/stderr; tee /dev/stderr)
+    else
+      if [ "$(basename "$file")" != "checksums.sha256sum" ]; then
+        # status message
+        echo "Spilling from hoard: ${path}" >&2
+      fi
     fi
 
     # drop old checksum for $file (and, if 'delete', drop it entirely)
