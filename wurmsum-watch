@@ -18,6 +18,10 @@
 # - [ ] On file moves, move the checksum from one .SHA256SUM to the other, without recomputing
 #   - tricky because we receive separate MOVE_FROM and MOVE_TO events (and debounce might mis-order them)
 # - [ ] On directory (MOVED_FROM,ISDIR) moves, move the line for dirname/.SHA256SUMS between the parent .SHA256SUMs
+# - [ ] On directory (MOVED_TO,ISDIR), trigger events for all children.
+#   - moving a directory within the watched store should work cleanly (except for the need to move the tree-hash of the checksums)
+#   - In the case of copying a directory in from outside the children will trigger events
+#     but if moving a directory from outside the watched dir
 # - [ ] the "spilling from" message should not print unless there was actually a pre-existing checksum to remove
 
 set -eo pipefail
@@ -92,7 +96,7 @@ while IFS=$'\n' read -d '' -r action path; do
   fi
 
   (
-    if [ "$action" != "DELETE" ] && [ "$action" != "MOVED_FROM" ]; then
+    if [ "$action" != "DELETE" ] && [ "$action" != "MOVED_FROM" ] && [ "$action" != "MOVED_FROM,ISDIR" ]; then
       # recompute checksum for the file
       if [ "$(basename "$file")" != ".SHA256SUMS" ]; then
         # status message
