@@ -99,7 +99,11 @@ while IFS=$'\n' read -d '' -r action path; do
   (
     if [ "$action" != "DELETE" ]; then
       # recompute checksum for the file
-      (set -x; cd "$_path" && sha256sum "$file") | tee /dev/stderr
+      if [ "$(basename "$file")" != "checksums.sha256sum" ]; then
+        # status message
+        echo "Clutching in hoard: ${path}" >&2
+      fi
+      (cd "$_path" && sha256sum "$file") # | (echo -n "${_path}/checksums.sha256sum:" > /dev/stderr; tee /dev/stderr)
     fi
 
     # drop old checksum for $file (and, if 'delete', drop it entirely)
@@ -108,7 +112,7 @@ while IFS=$'\n' read -d '' -r action path; do
     shasum_filename=$(printf "%s" "$file" | sed -z 's/\n/\\n/g')
     export shasum_filename
     if [ -f "${_path}/checksums.sha256sum" ]; then
-      ( cat "${_path}/checksums.sha256sum" | awk '$2 != ENVIRON["shasum_filename"]' ) | tee /dev/stderr
+      cat "${_path}/checksums.sha256sum" | awk '$2 != ENVIRON["shasum_filename"]'
     fi
   ) | sort -k 2 > "${_path}/.checksums.sha256sum.tmp"
 
