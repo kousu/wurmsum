@@ -69,6 +69,8 @@ while IFS=$'\n' read -d '' -r action path; do
 
   #echo "==> input: |$action| |$path|" >&2 # DEBUG
 
+  if [ -d "$path" ]; then continue; fi
+
   # we do this annoying parsing dance to handle weird characters like spaces and newlines in filenames
   # though we still cannot handle _trailing_ newlines
   file="$(basename "$path")"
