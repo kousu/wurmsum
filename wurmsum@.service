@@ -1,10 +1,10 @@
 [Unit]
-Description=File integrity over %i
+Description=Wurmsum file integrity updater over %i
 After=local-fs.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/fs-integrity %i
+ExecStart=/usr/bin/wurmsum-watch %i
 
 [Install]
 WantedBy=default.target

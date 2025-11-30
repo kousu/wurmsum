@@ -1,10 +1,10 @@
-# fs-integrity
+# Wurmsum
+
+![logo](logo.png)
 
 Checksum a complete directory tree, using inotify.
 
 This is to detect bitrot in large file collections, in order to make it possible to know when your files are dying and need recovery or redownloading.
-
-(name to be improved)
 
 ## Install
 
@@ -21,20 +21,20 @@ pacman -Sy inotify-tools   # Arch
 Install the script:
 
 ```
-install fs-integrity /usr/bin
+install wurmsum wurmsum-watch /usr/bin
 ```
 
 Intall the `.service`:
 
 ```
-sudo cp fs-integrity@.service /usr/lib/systemd/user/
+sudo cp wurmsum@.service /usr/lib/systemd/user/
 ```
 
 Enable it for each folder you want to protect:
 
 ```
-systemctl --user enable --now fs-integrity@/your/linux-iso/collection
-systemctl --user enable --now fs-integrity@~/Music
+systemctl --user enable --now wurmsum@/your/linux-iso/collection
+systemctl --user enable --now wurmsum@~/Music
 ```
 
 It's a user service to make sure the file permissions are sensible. ber You could also set up a system service, but just be careful that the user you run it as has the right permissions and doesn't create files you can't get rid of yourself. If you figure that out please contribute a PR :)
@@ -42,13 +42,13 @@ It's a user service to make sure the file permissions are sensible. ber You coul
 Manual scrub:
 
 ```
-fs-integrity-scrub ~/Music  # name pending
+wurm-scrub ~/Music  # name pending
 ```
 
 You can scrub only specific subfolders, if, e.g., they are the most important to you, or if you're planning on uploading them somewhere:
 
 ```
-fs-integrity-scrub ~/Music/Projects/Recordings
+wurm-scrub ~/Music/Projects/Recordings
 ```
 
 You can also enable a timer to scrub in the background automatically:
@@ -95,4 +95,4 @@ If you move files out, you lose their checksums. You need to only ever move them
 
 ### This
 
-The approach here is less aggressive and less complicated. Changes to files are checksummed on save (`integritywatch`), but verification only runs on demand (`integrity-verify`), which means in low-write high-read workloads, like media collections, your system isn't slowed down and can be done on the whole collection or folder-by-folder. It uses standard tools (`sha256sum`) whose format is portable (to macOS, Linux, and BSD). You can share or move a file collection without losing the checksums, because they're visible instead of being hidden in the block layer.
+The approach here is less aggressive and less complicated. Changes to files are checksummed on save (`integritywatch`), but verification only runs on demand (`wurmsum-scrub`), which means in low-write high-read workloads, like media collections, your system isn't slowed down and can be done on the whole collection or folder-by-folder. It uses standard tools (`sha256sum`) whose format is portable (to macOS, Linux, and BSD). You can share or move a file collection without losing the checksums, because they're visible instead of being hidden in the block layer.
