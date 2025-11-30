@@ -76,11 +76,11 @@ while IFS=$'\n' read -d '' -r action path; do
 
   #echo "path=|$path|, action=|$action|, file=|$file|, _path=|$_path|" >/dev/stderr  # DEBUG
 
-  if [ "$file" = "checksums.sha256sum" ]; then
+  if [ "$file" = ".SHA256SUMS" ]; then
     # checksum children recursively:
-    # checksums.sha256sum contains
-    # - child1/checksums.sha256sum
-    # - child2/checksums.sha256sum
+    # .SHA256SUMS contains
+    # - child1/.SHA256SUMS
+    # - child2/.SHA256SUMS
 
     if [ "$(realpath --relative-to=. "$_path")" = "." ]; then
         # root of the tree, avoid recursing
@@ -90,7 +90,7 @@ while IFS=$'\n' read -d '' -r action path; do
     # shift the subfolder into $file
     file="$(basename "$_path")/$file"
     _path="$(dirname "$_path")"
-  elif [ "$file" = ".checksums.sha256sum.tmp" ]; then
+  elif [ "$file" = ".SHA256SUMS.tmp" ]; then
     # avoid recursing
     continue
   fi
@@ -98,13 +98,13 @@ while IFS=$'\n' read -d '' -r action path; do
   (
     if [ "$action" != "DELETE" ] && [ "$action" != "MOVED_FROM" ]; then
       # recompute checksum for the file
-      if [ "$(basename "$file")" != "checksums.sha256sum" ]; then
+      if [ "$(basename "$file")" != ".SHA256SUMS" ]; then
         # status message
         echo "Clutching in hoard: ${path}" >&2
       fi
-      (cd "$_path" && sha256sum "$file") # | (echo -n "${_path}/checksums.sha256sum:" > /dev/stderr; tee /dev/stderr)
+      (cd "$_path" && sha256sum "$file") # | (echo -n "${_path}/.SHA256SUMS:" > /dev/stderr; tee /dev/stderr)
     else
-      if [ "$(basename "$file")" != "checksums.sha256sum" ]; then
+      if [ "$(basename "$file")" != ".SHA256SUMS" ]; then
         # status message
         echo "Spilling from hoard: ${path}" >&2
       fi
@@ -115,20 +115,20 @@ while IFS=$'\n' read -d '' -r action path; do
     # sha256sum encodes newlines as \n
     shasum_filename=$(printf "%s" "$file" | sed -z 's/\n/\\n/g')
     export shasum_filename
-    if [ -f "${_path}/checksums.sha256sum" ]; then
-      cat "${_path}/checksums.sha256sum" | while read -r s f; do
+    if [ -f "${_path}/.SHA256SUMS" ]; then
+      cat "${_path}/.SHA256SUMS" | while read -r s f; do
         if [ "$f" = "$shasum_filename" ]; then continue; fi
         printf "%s  %s\n" "$s" "$f"
       done
     fi
-  ) | sort -k 2 > "${_path}/.checksums.sha256sum.tmp"
+  ) | sort -k 2 > "${_path}/.SHA256SUMS.tmp"
 
 	# atomic mv or delete
-  if [ -s "${_path}/.checksums.sha256sum.tmp" ]; then
-    mv "${_path}/.checksums.sha256sum.tmp" "${_path}/checksums.sha256sum"
+  if [ -s "${_path}/.SHA256SUMS.tmp" ]; then
+    mv "${_path}/.SHA256SUMS.tmp" "${_path}/.SHA256SUMS"
   else
     # empty file => go away checksums
-    rm -f "${_path}/.checksums.sha256sum.tmp" "${_path}/checksums.sha256sum"
+    rm -f "${_path}/.SHA256SUMS.tmp" "${_path}/.SHA256SUMS"
   fi
 	# hash should recurse *up* parent folders
 	# #since inotify will notice the update

@@ -3,7 +3,7 @@
 
 targets=("${@:-./}")
 
-find "${targets[@]}" -name checksums.sha256sum -type f |
+find "${targets[@]}" -name .SHA256SUMS -type f |
 while read chk; do
   # merge all checksums
   #
