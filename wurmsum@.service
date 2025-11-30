@@ -4,7 +4,7 @@ After=local-fs.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/wurmsum-watch %i
+ExecStart=/usr/libexec/wurmsum/wurmsum-service %i
 
 [Install]
 WantedBy=default.target

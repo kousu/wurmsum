@@ -21,7 +21,8 @@ pacman -Sy inotify-tools   # Arch
 Install the script:
 
 ```
-install wurmsum wurmsum-watch /usr/bin
+install wurmsum-watch wurmsum-scrub wurmsum-backfill /usr/bin
+install -D wurmsum-service /usr/libexec/wurmsum/wurmsum-service
 ```
 
 Intall the `.service`:
@@ -33,22 +34,24 @@ sudo cp wurmsum@.service /usr/lib/systemd/user/
 Enable it for each folder you want to protect:
 
 ```
-systemctl --user enable --now wurmsum@/your/linux-iso/collection
-systemctl --user enable --now wurmsum@~/Music
+systemctl --user enable --now wurmsum@-your-linux-iso-collection
+systemctl --user enable --now wurmsum@Music
 ```
+
+> [!note] You need to replace / in folders by -; if your folders have - in their names, you cannot use the service on them; this is a systemd limitation. But since it runs as a user service, folder names are relative to your ~/.
 
 It's a user service to make sure the file permissions are sensible. ber You could also set up a system service, but just be careful that the user you run it as has the right permissions and doesn't create files you can't get rid of yourself. If you figure that out please contribute a PR :)
 
 Manual scrub:
 
 ```
-wurm-scrub ~/Music  # name pending
+wurmsum-scrub ~/Music
 ```
 
 You can scrub only specific subfolders, if, e.g., they are the most important to you, or if you're planning on uploading them somewhere:
 
 ```
-wurm-scrub ~/Music/Projects/Recordings
+wurmsum-scrub ~/Music/Projects/Recordings
 ```
 
 You can also enable a timer to scrub in the background automatically:

@@ -1,0 +1,7 @@
+#!/bin/sh
+
+TARGET=$1
+# systemd doesn't allow / in service template arguments
+# use - instead and hope for the best
+TARGET="$(echo "$TARGET" | sed 's/-/\//g')"
+/usr/bin/wurmsum-watch "$TARGET"
