@@ -10,6 +10,7 @@
 # Verify checksums:
 # find managed-folder/ -name checksums.sha256sum -type f | while read chk; do awk -v PREFIX=$(dirname $chk) '{print $1, PREFIX "/" $2}' $chk; done | sha256sum -c
 
+
 # TODO:
 # - [ ] should we catch move and create and modify?
 #    Using close_write is a poor-man's debounce.
@@ -17,9 +18,12 @@
 #    What about long running downloads? Should we checksum them halfway?
 # - [ ] detect and fill missing checksums on boot?
 #   - maybe a separate script is better ...
+#   - but don't delete checksums for missing files, nor update checksums for changed files: those could represent corruption.
+#
 # - [ ] use b2sum instead of sha256sum
 #   - faster
 #   - less portable?
+# - [ ] test with filenames with weird characters
 
 set -eo pipefail
 
@@ -64,29 +68,34 @@ while read -r path action file; do
 
   #echo "$path" "$action" "$file" >/dev/stderr  # DEBUG
 
-  # checksum child checksum
   if [ "$file" = "checksums.sha256sum" ]; then
-      if [ $(realpath --relative-to=. "$path") = "." ]; then
-          # root of the tree, avoid recursing
-          continue
-      fi
-      # shift the subfolder
-      file=$(basename "$path")/"$file"
-      path=$(dirname "$path")
+    # checksum children recursively:
+    # checksums.sha256sum contains
+    # - child1/checksums.sha256sum
+    # - child2/checksums.sha256sum
+
+    if [ $(realpath --relative-to=. "$path") = "." ]; then
+        # root of the tree, avoid recursing
+        continue
+    fi
+
+    # shift the subfolder
+    file=$(basename "$path")/"$file"
+    path=$(dirname "$path")
   elif [ "$file" = ".checksums.sha256sum.tmp" ]; then
-      # avoid recursing
-      continue
+    # avoid recursing
+    continue
   fi
 
-	(
-  if [ "$action" != "DELETE" ]; then
-    # recompute checksum for the file
-    (set -x; cd "$path" && sha256sum "$file") | tee /dev/stderr
-  fi
+  (
+    if [ "$action" != "DELETE" ]; then
+      # recompute checksum for the file
+      (set -x; cd "$path" && sha256sum "$file") | tee /dev/stderr
+    fi
 
-	# drop old checksum for $file (and, if 'delete', drop it entirely)
-	export file
-	cat "${path}/checksums.sha256sum" | awk '$2 != ENVIRON["file"]'
+    # drop old checksum for $file (and, if 'delete', drop it entirely)
+    export file
+    cat "${path}/checksums.sha256sum" | awk '$2 != ENVIRON["file"]'
   ) | sort -k 2 > "${path}/.checksums.sha256sum.tmp"
 
 	# atomic mv
