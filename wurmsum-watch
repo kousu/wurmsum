@@ -9,6 +9,8 @@
 
 
 # TODO:
+# - [ ] add some basic safeties around pre-existing .SHA256SUM files; if they don't _look_ like the right format, then warn and don't overwrite.
+# - [ ] add a test suite
 # - [ ] use b2sum instead of sha256sum
 #   - faster
 #   - less portable? does that matter?

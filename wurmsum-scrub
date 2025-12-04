@@ -1,5 +1,7 @@
 #!/bin/sh
 #
+# TODO:
+# - [ ] merge wurmsum-backfill with this? should scrubbing be a read-only operation or should it write?
 
 targets=("${@:-./}")
 

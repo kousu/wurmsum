@@ -40,7 +40,7 @@ systemctl --user enable --now wurmsum@Music
 
 > [!note] You need to replace / in folders by -; if your folders have - in their names, you cannot use the service on them; this is a systemd limitation. But since it runs as a user service, folder names are relative to your ~/.
 
-It's a user service to make sure the file permissions are sensible. ber You could also set up a system service, but just be careful that the user you run it as has the right permissions and doesn't create files you can't get rid of yourself. If you figure that out please contribute a PR :)
+It's a user service to make sure the file permissions are sensible. You could also set up a system service, but just be careful that the user you run it as has the right permissions and doesn't create files you can't get rid of yourself. If you figure that out please contribute a PR :). Also if you don't want to use systemd, please also contribute a PR. I also don't want to use systemd but we don't always get what we want.
 
 Manual scrub:
 
@@ -99,3 +99,7 @@ If you move files out, you lose their checksums. You need to only ever move them
 ### This
 
 The approach here is less aggressive and less complicated. Changes to files are checksummed on save (`integritywatch`), but verification only runs on demand (`wurmsum-scrub`), which means in low-write high-read workloads, like media collections, your system isn't slowed down and can be done on the whole collection or folder-by-folder. It uses standard tools (`sha256sum`) whose format is portable (to macOS, Linux, and BSD). You can share or move a file collection without losing the checksums, because they're visible instead of being hidden in the block layer.
+
+# Related Work
+
+- [HashDeep](https://github.com/jessek/hashdeep)
