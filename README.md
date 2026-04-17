@@ -1,3 +1,6 @@
+> [!WARNING]
+> Migrated to https://codeberg.org/kousu/wurmsum
+
 # Wurmsum
 
 ![logo](logo.png)
